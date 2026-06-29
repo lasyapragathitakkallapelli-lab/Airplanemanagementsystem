@@ -9,21 +9,17 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 
-# ─────────────────────────────────────────
-# PAGE CONFIG  (must be first Streamlit call)
-# ─────────────────────────────────────────
+# App Configuration
 st.set_page_config(
     page_title="SkyBook | Airline Reservation",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ─────────────────────────────────────────
-# GLOBAL CSS
-# ─────────────────────────────────────────
+# CSS
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght=300;400;600;700;800&family=Space+Mono:wght=400;700&display=swap');
 
 html, body, [class*="css"] {
     font-family: 'Sora', sans-serif;
@@ -34,7 +30,7 @@ html, body, [class*="css"] {
     min-height: 100vh;
 }
 
-/* ── HERO HEADER ── */
+/* Hero Header Component */
 .hero {
     text-align: center;
     padding: 2rem 0 1rem;
@@ -49,7 +45,7 @@ html, body, [class*="css"] {
 .hero h1 span { color: #f9a826; }
 .hero p { color: #aaa; font-size: 1rem; margin-top: 0.3rem; }
 
-/* ── CARD ── */
+/* Custom Container Cards */
 .card {
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.1);
@@ -79,7 +75,7 @@ html, body, [class*="css"] {
     margin-right: 6px;
 }
 
-/* ── STEPS ── */
+/* Multi-step Navigation Bar Layout */
 .step-bar { display: flex; justify-content: center; gap: 0; margin: 1.5rem 0; }
 .step {
     padding: 8px 24px;
@@ -94,7 +90,7 @@ html, body, [class*="css"] {
 .step.active { background: #f9a826; color: #0f0c29; border-color: #f9a826; }
 .step.done   { background: rgba(74,222,128,0.15); color: #4ade80; border-color: #4ade80; }
 
-/* ── INPUTS ── */
+/* Dynamic Input Conversions */
 .stTextInput > div > input,
 .stNumberInput > div > input,
 .stDateInput > div > input {
@@ -112,7 +108,7 @@ html, body, [class*="css"] {
 }
 label { color: #ccc !important; font-size: 0.85rem !important; }
 
-/* ── BUTTONS ── */
+/* Custom Action Buttons */
 .stButton > button {
     background: linear-gradient(135deg, #f9a826, #f97316) !important;
     color: #0f0c29 !important;
@@ -125,13 +121,13 @@ label { color: #ccc !important; font-size: 0.85rem !important; }
 }
 .stButton > button:hover { opacity: 0.85 !important; }
 
-/* ── SIDEBAR ── */
+/* Sidebar Background Alteration */
 section[data-testid="stSidebar"] {
     background: rgba(15,12,41,0.9) !important;
     border-right: 1px solid rgba(255,255,255,0.07) !important;
 }
 
-/* ── SUCCESS / ERROR ── */
+/* System Status Overrides */
 .stSuccess { background: rgba(74,222,128,0.1) !important; border-color: #4ade80 !important; }
 .stError   { background: rgba(239,68,68,0.1) !important; border-color: #ef4444 !important; }
 
@@ -140,10 +136,7 @@ hr { border-color: rgba(255,255,255,0.08) !important; }
 </style>
 """, unsafe_allow_html=True)
 
-
-# ─────────────────────────────────────────
-# SQLITE DB SETUP
-# ─────────────────────────────────────────
+# Database connectivity initialization scripts
 DB_PATH = "skybook.db"
 
 def get_conn():
@@ -219,7 +212,7 @@ def init_db():
     """)
     conn.commit()
 
-    # Seed airports if empty
+    # Pre-populating default airport datasets if table is blank
     if c.execute("SELECT COUNT(*) FROM airports").fetchone()[0] == 0:
         airports = [
             ('Delhi',       'Indira Gandhi International Airport',                  'DEL'),
@@ -241,22 +234,22 @@ def init_db():
         c.executemany("INSERT OR IGNORE INTO airports(city,airport_name,iata_code) VALUES(?,?,?)", airports)
         conn.commit()
 
-    # Seed demo user if not exists
+    # Generate test account credentials on first deployment 
     if c.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
         c.execute("INSERT OR IGNORE INTO users(username,email,password) VALUES(?,?,?)",
                   ('demo', 'demo@skybook.in', 'demo123'))
         conn.commit()
 
-    # Seed flights if empty
+    # Generate standard base flights database matrix
     if c.execute("SELECT COUNT(*) FROM flights").fetchone()[0] == 0:
-        seed_flights(c)
+        pre_populate_flight_schedule(c)
         conn.commit()
 
     conn.close()
 
 
-def seed_flights(c):
-    """Generate flights for all city pairs (3 per route)."""
+def pre_populate_flight_schedule(c):
+    """Generates standard route intervals between city targets."""
     cities = [
         'Delhi','Mumbai','Bangalore','Hyderabad','Chennai',
         'Kolkata','Pune','Ahmedabad','Jaipur','Kochi',
@@ -267,7 +260,7 @@ def seed_flights(c):
         ("Air India AI", "12:30", 1.15),
         ("SpiceJet SG",  "18:00", 0.92),
     ]
-    # Base prices between city pairs (distance-based approximation)
+    
     base_prices = {
         ('Delhi','Mumbai'):900, ('Delhi','Bangalore'):1300, ('Delhi','Hyderabad'):1000,
         ('Delhi','Chennai'):1350, ('Delhi','Kolkata'):1100, ('Delhi','Pune'):950,
@@ -310,7 +303,7 @@ def seed_flights(c):
         ('Chandigarh','Nagpur'):960, ('Chandigarh','Srinagar'):400,
         ('Nagpur','Srinagar'):1320,
     }
-    # Duration in minutes (approximate)
+
     durations = {
         ('Delhi','Mumbai'):126, ('Delhi','Bangalore'):176, ('Delhi','Hyderabad'):135,
         ('Delhi','Chennai'):177, ('Delhi','Kolkata'):148, ('Delhi','Pune'):128,
@@ -371,7 +364,7 @@ def seed_flights(c):
                 arr_m = arr_mins % 60
                 dep_time = f"{dep_h:02d}:{dep_m:02d}:00"
                 arr_time = f"{arr_h:02d}:{arr_m:02d}:00"
-                price = round(base * price_mult * 6.5 / 10) * 10  # scale to INR-ish
+                price = round(base * price_mult * 6.5 / 10) * 10
                 flight_name = f"{airline_name}-{flight_num}"
                 rows.append((flight_name, src, dst, dep_time, arr_time, price))
                 flight_num += 1
@@ -381,10 +374,7 @@ def seed_flights(c):
         rows
     )
 
-
-# ─────────────────────────────────────────
-# DB HELPER
-# ─────────────────────────────────────────
+# Execution middleware wrapper to handle query transactions safely
 def run(sql, params=(), fetch=True):
     try:
         conn = get_conn()
@@ -403,18 +393,12 @@ def run(sql, params=(), fetch=True):
         st.error(f"DB error: {e}")
         return [] if fetch else None
 
-
-# ─────────────────────────────────────────
-# INIT DB ON FIRST RUN
-# ─────────────────────────────────────────
+# Auto-initialize database storage parameters on boot
 if "db_initialized" not in st.session_state:
     init_db()
     st.session_state["db_initialized"] = True
 
-
-# ─────────────────────────────────────────
-# SESSION STATE DEFAULTS
-# ─────────────────────────────────────────
+# Session storage global default tracking values
 defaults = {
     "user": None,
     "step": "search",
@@ -430,10 +414,7 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-
-# ─────────────────────────────────────────
-# HERO
-# ─────────────────────────────────────────
+# App Header Component
 st.markdown("""
 <div class="hero">
   <h1>✈ Sky<span>Book</span></h1>
@@ -441,10 +422,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-
-# ─────────────────────────────────────────
-# SIDEBAR – Auth
-# ─────────────────────────────────────────
+# User Authentication Management Panel inside Sidebar
 with st.sidebar:
     st.markdown("### 🔐 Account")
     menu = st.selectbox("", ["Login", "Register", "Admin"], label_visibility="collapsed")
@@ -477,13 +455,10 @@ with st.sidebar:
                     else:
                         st.error("Invalid credentials")
             st.markdown("---")
-            st.markdown("**Demo:** username `demo` / password `demo123`")
         else:
             st.success(f"👋 {st.session_state.user[1]}")
 
-            # My Bookings
-            st.markdown("---")
-            st.markdown("#### 🎫 My Bookings")
+            st.markdown("🎫 My Bookings")
             my_bookings = run("""
                 SELECT b.booking_id, f.flight_name, f.source, f.destination,
                        b.travel_date, b.total_amount, p.payment_status
@@ -507,7 +482,6 @@ with st.sidebar:
             else:
                 st.caption("No bookings yet.")
 
-            st.markdown("---")
             if st.button("Logout"):
                 for k in list(st.session_state.keys()):
                     del st.session_state[k]
@@ -531,10 +505,7 @@ with st.sidebar:
             else:
                 st.info("No bookings yet.")
 
-
-# ─────────────────────────────────────────
-# MAIN CONTENT – requires login
-# ─────────────────────────────────────────
+# Route gatekeeper validating user registration status before execution
 if st.session_state.user is None:
     st.markdown("""
     <div class="card" style="text-align:center;padding:3rem;">
@@ -546,9 +517,8 @@ if st.session_state.user is None:
     """, unsafe_allow_html=True)
     st.stop()
 
-
-# ─── STEP BAR ────────────────────────────
-step_labels = ["🔍 Search", "💺 Seats", "💳 Payment", "✅ Done"]
+# Interactive steps visualization tracker
+step_labels = ["🔍 Search", "💺 Seats", "💳 Payment", "Done"]
 step_keys   = ["search", "seats", "payment", "done"]
 bar_html = '<div class="step-bar">'
 for i, (lbl, key) in enumerate(zip(step_labels, step_keys)):
@@ -558,10 +528,7 @@ for i, (lbl, key) in enumerate(zip(step_labels, step_keys)):
 bar_html += "</div>"
 st.markdown(bar_html, unsafe_allow_html=True)
 
-
-# ═══════════════════════════════════════════
-# STEP 1 – SEARCH
-# ═══════════════════════════════════════════
+# Step 1: Flight Search Interface 
 if st.session_state.step == "search":
     cities = [r[0] for r in run("SELECT city FROM airports ORDER BY city")]
 
@@ -598,7 +565,7 @@ if st.session_state.step == "search":
                 st.session_state["search_date"]  = tdate
                 st.session_state["search_npax"]  = n_pax
 
-    # Show results
+    # Visualizing filter operations
     if st.session_state.get("flight_results"):
         st.markdown("---")
         st.markdown(f"### Available Flights · {st.session_state.search_src} → {st.session_state.search_dst}")
@@ -646,10 +613,7 @@ if st.session_state.step == "search":
                     st.session_state.step           = "seats"
                     st.rerun()
 
-
-# ═══════════════════════════════════════════
-# STEP 2 – SEATS & PASSENGER DETAILS
-# ═══════════════════════════════════════════
+# Step 2: Seating Assignment Configurations 
 elif st.session_state.step == "seats":
     f   = st.session_state.chosen_flight
     n   = st.session_state.n_pax
@@ -661,13 +625,12 @@ elif st.session_state.step == "seats":
       <div class="card-title">✈ {f[1]}</div>
       <div class="card-route">{f[2]} → {f[3]}</div>
       <div class="card-meta">🗓 {st.session_state.travel_date} &nbsp;·&nbsp;
-        🕐 {dep} → {arr} &nbsp;·&nbsp; {n} passenger(s)</div>
+         {dep} → {arr} &nbsp;·&nbsp; {n} passenger(s)</div>
       <div class="card-price">Total: ₹{f[6]*n:,.0f}</div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── SEAT MAP ────────────────────────────
-    st.markdown("### 💺 Choose Your Seats")
+    st.markdown(" 💺 Choose Your Seats")
     st.caption(f"Select exactly {n} seat(s).")
 
     rng = random.Random(f[0])
@@ -678,7 +641,6 @@ elif st.session_state.step == "seats":
         for _ in range(30)
     )
 
-    # Build visual seat map
     col_header = '<div style="display:flex;gap:6px;margin-bottom:4px;align-items:center;">'
     col_header += '<div style="width:24px;"></div>'
     for col in COLS:
@@ -725,7 +687,7 @@ elif st.session_state.step == "seats":
         placeholder="e.g. 3A, 7C",
         label_visibility="collapsed"
     )
-    if st.button("✔ Confirm Seats"):
+    if st.button(" Confirm Seats"):
         raw   = [s.strip().upper() for s in seat_input.split(",") if s.strip()]
         valid = [s for s in raw if
                  len(s) >= 2 and
@@ -740,7 +702,7 @@ elif st.session_state.step == "seats":
             st.session_state.selected_seats = unique
             st.success(f"Seats confirmed: {', '.join(unique)}")
 
-    # ── PASSENGER DETAILS ────────────────────
+    # Parsing client profile verification parameters
     if len(st.session_state.selected_seats) == n:
         st.markdown("### 👤 Passenger Details")
         pax_list  = []
@@ -772,10 +734,7 @@ elif st.session_state.step == "seats":
         else:
             st.info("Fill in all passenger names to continue.")
 
-
-# ═══════════════════════════════════════════
-# STEP 3 – PAYMENT
-# ═══════════════════════════════════════════
+# Step 3: Transaction Logic & Checking Processes 
 elif st.session_state.step == "payment":
     import time
 
@@ -785,7 +744,7 @@ elif st.session_state.step == "payment":
     pax   = st.session_state.pax_details
     tdate = st.session_state.travel_date
 
-    st.markdown("### 🧾 Booking Summary")
+    st.markdown(" Booking Summary")
     pax_html = "".join(
         f"<tr><td style='color:#ccc;padding:4px 12px'>{i+1}. {p['name']}</td>"
         f"<td style='color:#aaa;padding:4px 12px'>Age {p['age']}, {p['gender']}</td>"
@@ -825,11 +784,11 @@ elif st.session_state.step == "payment":
 
     elif method == "Net Banking":
         bank = st.selectbox("Select Your Bank", ["SBI","HDFC","ICICI","Axis","Kotak","PNB","BOB"])
-        st.markdown(f'<div style="color:#64748b;font-size:0.75rem;">Demo only — redirecting to {bank} portal (no redirect happens)</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="color:#64748b;font-size:0.75rem;">Demo only — redirecting to {bank} portal</div>', unsafe_allow_html=True)
 
     else:
         st.text_input("Wallet / Phone Number", value="9876543210", key="wallet_ph")
-        st.markdown('<div style="color:#4ade80;font-size:0.8rem;">✅ Wallet Balance: ₹50,000 (Demo)</div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:#4ade80;font-size:0.8rem;"> Wallet Balance: ₹50,000 (Demo)</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     col_back, col_pay = st.columns([1, 3])
@@ -884,10 +843,7 @@ elif st.session_state.step == "payment":
             st.session_state.step       = "done"
             st.rerun()
 
-
-# ═══════════════════════════════════════════
-# STEP 4 – CONFIRMATION + PDF TICKET
-# ═══════════════════════════════════════════
+# Step 4: Final Document Compilation (PDF Execution) 
 elif st.session_state.step == "done":
     f          = st.session_state.chosen_flight
     pax        = st.session_state.pax_details
@@ -994,14 +950,14 @@ elif st.session_state.step == "done":
     pdf_buf = make_ticket_pdf(booking_id, f, pax, tdate, total)
 
     st.download_button(
-        label="📥  Download Boarding Pass (PDF)",
+        label=" Download Boarding Pass (PDF)",
         data=pdf_buf,
         file_name=f"SkyBook_Ticket_{booking_id}.pdf",
         mime="application/pdf",
         use_container_width=True
     )
 
-    st.markdown("### 🗒 Trip Summary")
+    st.markdown(" 🗒 Trip Summary")
     for p in pax:
         st.markdown(f"""
         <div class="card" style="padding:1rem 1.4rem;">
@@ -1011,7 +967,7 @@ elif st.session_state.step == "done":
         </div>
         """, unsafe_allow_html=True)
 
-    if st.button("🔄  Book Another Flight"):
+    if st.button(" Book Another Flight"):
         keys_to_clear = ["step","chosen_flight","travel_date","n_pax","pax_details",
                          "selected_seats","booking_id","total","flight_results",
                          "search_src","search_dst","search_date","search_npax"]
