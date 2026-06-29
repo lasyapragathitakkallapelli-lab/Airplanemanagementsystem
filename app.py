@@ -456,7 +456,7 @@ with st.sidebar:
                         st.error("Invalid credentials")
             st.markdown("---")
         else:
-            st.success(f"👋 {st.session_state.user[1]}")
+            st.success(f" Hello {st.session_state.user[1]}")
 
             st.markdown("🎫 My Bookings")
             my_bookings = run("""
@@ -511,8 +511,8 @@ if st.session_state.user is None:
     <div class="card" style="text-align:center;padding:3rem;">
       <div style="font-size:3rem;">🛫</div>
       <h3 style="color:white;">Please login to search & book flights</h3>
-      <p style="color:#aaa;">Use the sidebar → Login to get started<br>
-      <b style="color:#f9a826">Demo credentials: demo / demo123</b></p>
+      <p style="color:#aaa;">Login to get started<br>
+      </p>
     </div>
     """, unsafe_allow_html=True)
     st.stop()
